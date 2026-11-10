@@ -1,0 +1,18 @@
+{
+  "name": "SpendWise - Mobile Expense & Credit Tracker",
+  "short_name": "SpendWise",
+  "description": "Mobile expense tracker with history, credit, debit, and date-wise visualizations.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'><rect width='100' height='100' rx='24' fill='%2310b981'/><path d='M30 65L45 50L55 60L70 35M70 35H55M70 35V50' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

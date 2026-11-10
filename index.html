@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>SpendWise - Mobile Expense & Credit Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2310b981'/><path d='M30 65L45 50L55 60L70 35M70 35H55M70 35V50' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            debit: {
+              light: '#fef2f2',
+              DEFAULT: '#ef4444',
+              dark: '#dc2626',
+            },
+            credit: {
+              light: '#ecfdf5',
+              DEFAULT: '#10b981',
+              dark: '#059669',
+            },
+            darkbg: {
+              900: '#090d16',
+              800: '#111827',
+              750: '#162032',
+              700: '#1e293b',
+              600: '#334155',
+            }
+          },
+          boxShadow: {
+            'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.3)',
+            'glow-rose': '0 0 25px -5px rgba(239, 68, 68, 0.3)',
+            'device': '0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 12px #1f2937, 0 0 0 14px #374151',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* CSS Variables & Modern Web Standards */
+    :root {
+      --target-size: 44px;
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      overflow-wrap: anywhere;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* Headings balance */
+    h1, h2, h3, h4 {
+      text-wrap: balance;
+    }
+
+    p {
+      text-wrap: pretty;
+    }
+
+    /* Target sizing for touch */
+    @media (pointer: coarse) {
+      button, select, input, [role="button"], nav a {
+        min-block-size: var(--target-size);
+      }
+    }
+
+    /* Custom smooth scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.3);
+      border-radius: 9999px;
+    }
+
+    /* Hide scrollbars for neat mobile tabs */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Safe area utilities */
+    .safe-top {
+      padding-top: max(1rem, var(--sat));
+    }
+    .safe-bottom {
+      padding-bottom: max(1.25rem, var(--sab));
+    }
+
+    /* Modal animation */
+    .sheet-up {
+      animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0.6; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Chart tooltips & pulses */
+    .chart-bar:hover {
+      filter: brightness(1.18);
+      transform: scaleY(1.02);
+      transform-origin: bottom;
+    }
+
+    /* Pulse dot */
+    @keyframes pulseSoft {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+    .pulse-soft {
+      animation: pulseSoft 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased transition-colors duration-200">
+
+  <!-- ================= TOP CONTROLS BAR (Outside Frame on Desktop) ================= -->
+  <header class="hidden lg:flex items-center justify-between px-8 py-3.5 bg-slate-950/80 border-b border-slate-800/80 backdrop-blur sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-glow-emerald">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+          SpendWise <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">Mobile App PWA</span>
+        </h1>
+        <p class="text-xs text-slate-400">Personal Cash Flow, Ledger & Date-wise Expense Visualizer</p>
+      </div>
+    </div>
+
+    <!-- Frame & View Toggles -->
+    <div class="flex items-center gap-3">
+      <!-- Frame Mode Switcher -->
+      <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-medium">
+        <button id="view-mode-phone" type="button" onclick="setDeviceView('phone')" class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow-sm" aria-label="Switch to Mobile Frame view">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+          iPhone Frame
+        </button>
+        <button id="view-mode-full" type="button" onclick="setDeviceView('full')" class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-slate-400 hover:text-white" aria-label="Switch to Fullscreen Responsive view">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+          Full Screen
+        </button>
+      </div>
+
+      <!-- Currency Switcher -->
+      <select id="currency-select" onchange="changeCurrency(this.value)" class="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Currency selection">
+        <option value="$">USD ($)</option>
+        <option value="₹">INR (₹)</option>
+        <option value="€">EUR (€)</option>
+        <option value="£">GBP (£)</option>
+        <option value="¥">JPY (¥)</option>
+        <option value="C$">CAD (C$)</option>
+      </select>
+
+      <!-- Theme Switcher -->
+      <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition" aria-label="Toggle theme">
+        <span id="theme-icon">🌙</span>
+      </button>
+
+      <!-- Quick Export CSV -->
+      <button type="button" onclick="exportTransactionsCSV()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition" aria-label="Export transactions to CSV">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        CSV Export
+      </button>
+
+      <!-- Reset Data -->
+      <button type="button" onclick="confirmResetData()" class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-medium flex items-center gap-1 transition" aria-label="Reset to sample data">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Sample Data
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main id="app-wrapper" class="flex items-center justify-center min-h-[calc(100vh-65px)] lg:py-8 px-0 lg:px-4 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+
+    <!-- ================= MOBILE PHONE MOCKUP / APP SHELL ================= -->
+    <div id="device-container" class="relative w-full max-w-[420px] h-[100dvh] lg:h-[880px] bg-slate-950 text-slate-100 flex flex-col overflow-hidden transition-all duration-300 lg:rounded-[48px] lg:shadow-device lg:border-[6px] lg:border-slate-800">
+
+      <!-- Dynamic Island & Phone Top Hardware Bezel (Visible only in phone frame) -->
+      <div id="phone-hardware" class="relative z-40 bg-slate-950 px-6 pt-3 pb-2 flex items-center justify-between text-xs select-none border-b border-slate-900/60">
+        <!-- Live Clock -->
+        <span id="status-bar-time" class="font-semibold text-slate-300 tracking-tight">09:41</span>
+
+        <!-- Dynamic Island pill -->
+        <div class="h-5 w-24 bg-black rounded-full border border-slate-800/60 flex items-center justify-center gap-1.5 px-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-700/50"></div>
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-500/80 pulse-soft"></div>
+        </div>
+
+        <!-- System Icons (Signal, Wifi, Battery) -->
+        <div class="flex items-center gap-1.5 text-slate-400">
+          <!-- Signal -->
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z" opacity="0.3"/>
+            <path d="M2 19h20L12 3 2 19z"/>
+          </svg>
+          <!-- Wifi -->
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.393 9.326c5.857-5.857 15.355-5.857 21.213 0"/>
+          </svg>
+          <!-- Battery -->
+          <div class="w-5 h-2.5 border border-slate-400 rounded-sm p-0.5 flex items-center">
+            <div class="h-full w-4/5 bg-emerald-400 rounded-2xs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Header Bar -->
+      <div class="px-5 py-3.5 flex items-center justify-between bg-slate-950/90 backdrop-blur border-b border-slate-800/60 z-30">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-md">
+            <svg class="w-5 h-5 font-bold" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="header-greeting" class="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+              SpendWise
+            </h2>
+            <p id="header-date" class="text-[11px] text-slate-400 font-medium">Nov 10, 2026</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Quick Add Button in Header -->
+          <button type="button" onclick="openAddModal()" class="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center font-bold text-lg shadow-glow-emerald transition active:scale-95" aria-label="Add transaction">
+            +
+          </button>
+          <!-- Quick Switch Currency on Mobile -->
+          <button type="button" onclick="cycleCurrency()" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 hover:bg-slate-800" title="Cycle Currency">
+            <span id="mobile-curr-indicator">$</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= SCROLLABLE CONTENT BODY ================= -->
+      <div id="main-content-scroll" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-28">
+
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <section id="tab-dashboard" class="space-y-4">
+
+          <!-- 1. Balance Summary Card -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 border border-slate-800/90 p-5 shadow-xl">
+            <!-- Decorative background blur orb -->
+            <div class="absolute -right-8 -top-8 w-36 h-36 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -left-8 -bottom-8 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="relative z-10 space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="font-medium tracking-wide flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-soft"></span>
+                  TOTAL NET BALANCE
+                </span>
+                <span id="savings-rate-badge" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 text-[10px]">
+                  +62.4% Net Saved
+                </span>
+              </div>
+
+              <!-- Main Amount Display -->
+              <div>
+                <h3 id="net-balance-display" class="text-3xl font-extrabold tracking-tight text-white font-mono">
+                  $0.00
+                </h3>
+                <p id="balance-subtext" class="text-[11px] text-slate-400 mt-0.5">Overall cash flow position this month</p>
+              </div>
+
+              <!-- Credit & Debit Split Cards -->
+              <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800/80">
+                <!-- Total Credit (Income) -->
+                <div class="bg-slate-950/60 rounded-2xl p-3 border border-emerald-500/20">
+                  <div class="flex items-center gap-1.5 text-emerald-400 text-[11px] font-semibold mb-1">
+                    <div class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                    </div>
+                    Income (Credit)
+                  </div>
+                  <p id="total-credit-display" class="text-base font-bold text-emerald-400 font-mono">+$0.00</p>
+                  <p id="credit-count-text" class="text-[10px] text-slate-400">0 inflows</p>
+                </div>
+
+                <!-- Total Debit (Expense) -->
+                <div class="bg-slate-950/60 rounded-2xl p-3 border border-rose-500/20">
+                  <div class="flex items-center gap-1.5 text-rose-400 text-[11px] font-semibold mb-1">
+                    <div class="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                    </div>
+                    Expense (Debit)
+                  </div>
+                  <p id="total-debit-display" class="text-base font-bold text-rose-400 font-mono">-$0.00</p>
+                  <p id="debit-count-text" class="text-[10px] text-slate-400">0 outflows</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Monthly Budget Progress Widget -->
+          <div class="rounded-2xl bg-slate-900 border border-slate-800/90 p-4 space-y-2.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                🎯 Monthly Budget
+              </span>
+              <span id="budget-ratio-text" class="text-slate-400 font-mono font-medium text-[11px]">
+                $0 / $0
+              </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden p-0.5">
+              <div id="budget-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style="width: 45%;"></div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span id="budget-status-text">Safe spending rate</span>
+              <span id="budget-remaining-text" class="text-emerald-400 font-semibold">$0 remaining</span>
+            </div>
+          </div>
+
+          <!-- 3. Quick Action Buttons Grid -->
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="openAddModal('debit')" class="p-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-center space-y-1.5 transition active:scale-95 group">
+              <div class="w-9 h-9 mx-auto rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center group-hover:bg-rose-500/25 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
+              </div>
+              <span class="text-[11px] font-medium text-slate-300 block">Expense</span>
+            </button>
+
+            <button type="button" onclick="openAddModal('credit')" class="p-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-center space-y-1.5 transition active:scale-95 group">
+              <div class="w-9 h-9 mx-auto rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center group-hover:bg-emerald-500/25 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              </div>
+              <span class="text-[11px] font-medium text-slate-300 block">Income</span>
+            </button>
+
+            <button type="button" onclick="switchTab('analytics')" class="p-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-center space-y-1.5 transition active:scale-95 group">
+              <div class="w-9 h-9 mx-auto rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center group-hover:bg-indigo-500/25 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              </div>
+              <span class="text-[11px] font-medium text-slate-300 block">Trends</span>
+            </button>
+
+            <button type="button" onclick="switchTab('analytics'); setVisualSubView('calendar');" class="p-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-center space-y-1.5 transition active:scale-95 group">
+              <div class="w-9 h-9 mx-auto rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center group-hover:bg-amber-500/25 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+              </div>
+              <span class="text-[11px] font-medium text-slate-300 block">Calendar</span>
+            </button>
+          </div>
+
+          <!-- 4. Mini 7-Day Expense Sparkline -->
+          <div class="rounded-2xl bg-slate-900 border border-slate-800/90 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Last 7 Days Expense Pace</h4>
+                <p class="text-[10px] text-slate-400">Daily outflow tracking</p>
+              </div>
+              <button type="button" onclick="switchTab('analytics')" class="text-xs text-emerald-400 font-semibold hover:underline flex items-center gap-0.5">
+                Full Charts &rarr;
+              </button>
+            </div>
+
+            <!-- Mini Sparkline Bars Container -->
+            <div id="mini-sparkline-container" class="h-24 w-full flex items-end justify-between gap-1.5 pt-2">
+              <!-- Rendered dynamically by JS -->
+            </div>
+          </div>
+
+          <!-- 5. Recent Transactions List -->
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Recent Transactions</h4>
+              <button type="button" onclick="switchTab('history')" class="text-xs text-emerald-400 font-medium hover:underline">
+                View All
+              </button>
+            </div>
+
+            <div id="recent-transactions-list" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ================= TAB 2: DATE-WISE VISUALIZATIONS ================= -->
+        <section id="tab-analytics" class="space-y-4 hidden">
+
+          <!-- Header & Range Filter -->
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-white tracking-tight">Date-wise Visualizations</h3>
+                <p class="text-xs text-slate-400">Daily expenses & cash flow analytics</p>
+              </div>
+            </div>
+
+            <!-- Time Filter Pills -->
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              <button type="button" onclick="setDateFilter('7d')" id="btn-filter-7d" class="date-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-500 text-slate-950 shadow-sm transition">
+                Last 7 Days
+              </button>
+              <button type="button" onclick="setDateFilter('30d')" id="btn-filter-30d" class="date-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+                Last 30 Days
+              </button>
+              <button type="button" onclick="setDateFilter('this_month')" id="btn-filter-this_month" class="date-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+                This Month
+              </button>
+              <button type="button" onclick="setDateFilter('last_month')" id="btn-filter-last_month" class="date-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+                Last Month
+              </button>
+              <button type="button" onclick="setDateFilter('all')" id="btn-filter-all" class="date-filter-pill px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+                All Time
+              </button>
+            </div>
+          </div>
+
+          <!-- Range Summary Metrics Cards -->
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800 text-center">
+              <p class="text-[10px] text-slate-400 font-medium">Period Total</p>
+              <p id="range-total-spent" class="text-sm font-bold text-rose-400 font-mono mt-0.5">$0.00</p>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800 text-center">
+              <p class="text-[10px] text-slate-400 font-medium">Daily Avg</p>
+              <p id="range-avg-spent" class="text-sm font-bold text-amber-400 font-mono mt-0.5">$0.00</p>
+            </div>
+            <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800 text-center">
+              <p class="text-[10px] text-slate-400 font-medium">Peak Day</p>
+              <p id="range-peak-spent" class="text-sm font-bold text-indigo-400 font-mono mt-0.5">$0.00</p>
+            </div>
+          </div>
+
+          <!-- Chart Sub-Navigation -->
+          <div class="flex items-center bg-slate-900/90 p-1 rounded-2xl border border-slate-800 text-xs font-medium">
+            <button type="button" onclick="setVisualSubView('daily_bars')" id="vsub-daily_bars" class="flex-1 py-1.5 rounded-xl transition text-center font-bold bg-emerald-500 text-slate-950">
+              📊 Daily Bars
+            </button>
+            <button type="button" onclick="setVisualSubView('cashflow')" id="vsub-cashflow" class="flex-1 py-1.5 rounded-xl transition text-center text-slate-400 hover:text-white">
+              ⚖️ In vs Out
+            </button>
+            <button type="button" onclick="setVisualSubView('categories')" id="vsub-categories" class="flex-1 py-1.5 rounded-xl transition text-center text-slate-400 hover:text-white">
+              🍩 Category
+            </button>
+            <button type="button" onclick="setVisualSubView('calendar')" id="vsub-calendar" class="flex-1 py-1.5 rounded-xl transition text-center text-slate-400 hover:text-white">
+              📅 Calendar
+            </button>
+          </div>
+
+          <!-- 1. Daily Bar Chart Container -->
+          <div id="view-daily-bars" class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Daily Outflow Distribution</h4>
+                <p class="text-[10px] text-slate-400">Tap any day bar for details</p>
+              </div>
+              <span id="chart-date-label" class="text-[10px] font-mono text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                Last 7 Days
+              </span>
+            </div>
+
+            <!-- SVG / Interactive Bar Chart Area -->
+            <div class="relative">
+              <div id="daily-bar-chart-container" class="h-56 w-full flex items-end justify-between gap-2 pt-6 pb-6">
+                <!-- Bars injected dynamically -->
+              </div>
+              <!-- Selected bar detail popup tooltip -->
+              <div id="chart-tooltip" class="hidden absolute top-2 left-1/2 -translate-x-1/2 bg-slate-850 border border-slate-700 px-3 py-1.5 rounded-xl text-xs shadow-xl text-center z-20 pointer-events-none transition-all">
+                <span id="tooltip-date" class="font-bold text-slate-200 block text-[11px]"></span>
+                <span id="tooltip-amount" class="font-mono text-rose-400 font-bold"></span>
+              </div>
+            </div>
+
+            <div class="text-[10px] text-center text-slate-500 pt-1 border-t border-slate-800">
+              Hover or tap on bar to inspect day transactions
+            </div>
+          </div>
+
+          <!-- 2. Credit vs Debit Cash Flow Comparison View -->
+          <div id="view-cashflow" class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-3 hidden">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Credit vs. Debit Comparison</h4>
+                <p class="text-[10px] text-slate-400">Income received vs Expense spent</p>
+              </div>
+              <div class="flex items-center gap-2 text-[10px]">
+                <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Credit</span>
+                <span class="flex items-center gap-1 text-rose-400"><span class="w-2 h-2 rounded-full bg-rose-400"></span> Debit</span>
+              </div>
+            </div>
+
+            <!-- Side-by-Side Inflow vs Outflow Bars -->
+            <div id="cashflow-chart-container" class="h-56 w-full flex items-end justify-around gap-4 pt-6 pb-6">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Net Cash Flow Summary Pill -->
+            <div id="cashflow-net-summary" class="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between">
+              <span class="text-slate-400">Net Period Cash Flow:</span>
+              <span id="cashflow-net-val" class="font-mono font-bold text-emerald-400">+$0.00</span>
+            </div>
+          </div>
+
+          <!-- 3. Category Donut / Breakdown View -->
+          <div id="view-categories" class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-4 hidden">
+            <div>
+              <h4 class="text-xs font-bold text-slate-200">Category Spending Breakdown</h4>
+              <p class="text-[10px] text-slate-400">Where your money went in this period</p>
+            </div>
+
+            <!-- SVG Donut Chart with Center Total -->
+            <div class="relative flex items-center justify-center my-2">
+              <svg id="category-donut-svg" class="w-48 h-48 -rotate-90 transform" viewBox="0 0 100 100">
+                <!-- SVG arcs dynamically injected -->
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider">Total Spent</span>
+                <span id="donut-center-amount" class="text-base font-bold text-white font-mono">$0</span>
+              </div>
+            </div>
+
+            <!-- Category Legend List -->
+            <div id="category-legend-list" class="space-y-2 pt-2 border-t border-slate-800">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- 4. Interactive Calendar Heatmap View -->
+          <div id="view-calendar" class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-3 hidden">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Interactive Date Calendar</h4>
+                <p class="text-[10px] text-slate-400">Tap a date to see that day's ledger</p>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs">
+                <button type="button" onclick="prevMonth()" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300" aria-label="Previous month">&larr;</button>
+                <span id="calendar-month-label" class="font-bold text-slate-200 text-xs px-1">Nov 2026</span>
+                <button type="button" onclick="nextMonth()" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300" aria-label="Next month">&rarr;</button>
+              </div>
+            </div>
+
+            <!-- Weekday headers -->
+            <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 py-1">
+              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div id="calendar-days-grid" class="grid grid-cols-7 gap-1">
+              <!-- Dynamically populated 35-42 days -->
+            </div>
+
+            <!-- Selected Date Drilldown Card -->
+            <div id="calendar-day-detail" class="mt-3 p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <span id="cal-selected-date-text" class="text-slate-300">Selected Day</span>
+                <span id="cal-selected-day-net" class="font-mono text-emerald-400">$0.00</span>
+              </div>
+              <div id="cal-selected-transactions" class="space-y-1.5 text-xs max-h-36 overflow-y-auto no-scrollbar">
+                <!-- Day transactions -->
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ================= TAB 3: TRANSACTION HISTORY ================= -->
+        <section id="tab-history" class="space-y-3 hidden">
+
+          <!-- Search & Type Filter Bar -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-white tracking-tight">Transaction History</h3>
+                <p class="text-xs text-slate-400">Complete credit & debit records</p>
+              </div>
+              <!-- CSV Download -->
+              <button type="button" onclick="exportTransactionsCSV()" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                CSV
+              </button>
+            </div>
+
+            <!-- Search Field -->
+            <div class="relative">
+              <search>
+                <form action="#" method="POST" onsubmit="event.preventDefault();">
+                  <div class="relative flex items-center">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input id="history-search" type="search" placeholder="Search title, note, category..." oninput="handleSearchChange(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-9 pr-9 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    <button id="search-clear-btn" type="button" onclick="clearSearch()" class="hidden absolute right-3 text-slate-400 hover:text-white text-xs" aria-label="Clear search">&times;</button>
+                  </div>
+                </form>
+              </search>
+            </div>
+
+            <!-- Quick Type Filter Buttons (All, Debits, Credits) -->
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="setHistoryTypeFilter('all')" id="hist-pill-all" class="flex-1 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 transition">
+                All
+              </button>
+              <button type="button" onclick="setHistoryTypeFilter('debit')" id="hist-pill-debit" class="flex-1 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-rose-400 transition">
+                🔴 Debits
+              </button>
+              <button type="button" onclick="setHistoryTypeFilter('credit')" id="hist-pill-credit" class="flex-1 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-emerald-400 transition">
+                🟢 Credits
+              </button>
+            </div>
+
+            <!-- Secondary Category & Payment Method Filters -->
+            <div class="flex items-center gap-2">
+              <select id="history-category-filter" onchange="handleCategoryFilterChange(this.value)" class="flex-1 bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500" aria-label="Filter by category">
+                <option value="all">All Categories</option>
+                <!-- Categories populated by JS -->
+              </select>
+              <select id="history-sort-select" onchange="handleSortChange(this.value)" class="flex-1 bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500" aria-label="Sort transactions">
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="amount-desc">Highest Amount</option>
+                <option value="amount-asc">Lowest Amount</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Grouped History Feed -->
+          <div id="history-feed" class="space-y-4 pt-1">
+            <!-- Dynamically grouped date-wise list -->
+          </div>
+
+        </section>
+
+        <!-- ================= TAB 4: BUDGETS & SETTINGS ================= -->
+        <section id="tab-budget" class="space-y-4 hidden">
+          <div>
+            <h3 class="text-base font-bold text-white tracking-tight">Budgets & Settings</h3>
+            <p class="text-xs text-slate-400">Financial limits and app preferences</p>
+          </div>
+
+          <!-- Monthly Budget Setting Card -->
+          <div class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-bold">🎯</div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-200">Monthly Spending Budget</h4>
+                  <p class="text-[10px] text-slate-400">Alerts when nearing limit</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <span id="budget-curr-symbol" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <input id="input-monthly-budget" type="number" min="0" step="50" value="3500" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-sm font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              </div>
+              <button type="button" onclick="saveMonthlyBudget()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+                Update
+              </button>
+            </div>
+          </div>
+
+          <!-- Preferences Card -->
+          <div class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+            <h4 class="text-xs font-bold text-slate-200">App Preferences</h4>
+
+            <!-- Currency selection -->
+            <div class="flex items-center justify-between py-2 border-b border-slate-800 text-xs">
+              <span class="text-slate-300">Base Currency</span>
+              <select id="settings-currency-select" onchange="changeCurrency(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 font-mono text-xs focus:ring-1 focus:ring-emerald-500">
+                <option value="$">USD ($)</option>
+                <option value="₹">INR (₹)</option>
+                <option value="€">EUR (€)</option>
+                <option value="£">GBP (£)</option>
+                <option value="¥">JPY (¥)</option>
+                <option value="C$">CAD (C$)</option>
+              </select>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="flex items-center justify-between py-2 border-b border-slate-800 text-xs">
+              <span class="text-slate-300">Appearance Theme</span>
+              <button type="button" onclick="toggleTheme()" class="px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs font-medium hover:bg-slate-800 transition">
+                <span id="settings-theme-label">🌙 OLED Dark</span>
+              </button>
+            </div>
+
+            <!-- LocalStorage Status -->
+            <div class="flex items-center justify-between py-2 text-xs">
+              <span class="text-slate-300">Saved Records</span>
+              <span id="storage-record-count" class="font-mono text-emerald-400 font-bold">0 transactions</span>
+            </div>
+          </div>
+
+          <!-- Data Management Card -->
+          <div class="rounded-3xl bg-slate-900 border border-slate-800 p-4 space-y-2.5">
+            <h4 class="text-xs font-bold text-slate-200">Data & Portability</h4>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onclick="exportTransactionsJSON()" class="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-medium text-center transition">
+                📥 Backup JSON
+              </button>
+              <label class="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-medium text-center transition cursor-pointer">
+                📤 Restore JSON
+                <input type="file" id="import-json-input" accept=".json" onchange="importTransactionsJSON(event)" class="hidden">
+              </label>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex gap-2">
+              <button type="button" onclick="confirmResetData()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+                Load Sample Data
+              </button>
+              <button type="button" onclick="confirmClearAllData()" class="flex-1 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-medium transition">
+                Clear All Data
+              </button>
+            </div>
+          </div>
+
+          <!-- PWA Installation Info -->
+          <div class="rounded-2xl bg-slate-950 border border-slate-800/80 p-3.5 text-xs text-slate-400 space-y-1">
+            <p class="font-bold text-slate-300 flex items-center gap-1.5">
+              📱 Install on your Phone
+            </p>
+            <p class="text-[11px] leading-relaxed">
+              Open this page on Safari (iOS) and tap <strong>Share &rarr; Add to Home Screen</strong>, or on Chrome (Android) tap <strong>Install App</strong> for full offline native app experience.
+            </p>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+      <nav class="relative z-30 bg-slate-950/95 backdrop-blur border-t border-slate-800/80 px-4 py-2 safe-bottom flex items-center justify-around" aria-label="Bottom Navigation">
+        <!-- Dashboard Tab -->
+        <button type="button" onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="flex flex-col items-center gap-1 text-emerald-400 font-bold transition-all py-1 px-3" aria-label="Dashboard">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="text-[10px] tracking-tight">Home</span>
+        </button>
+
+        <!-- Visualizations Tab -->
+        <button type="button" onclick="switchTab('analytics')" id="nav-btn-analytics" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all py-1 px-3" aria-label="Visualizations">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span class="text-[10px] tracking-tight">Visuals</span>
+        </button>
+
+        <!-- Center Floating Action Button (FAB) -->
+        <div class="relative -top-5">
+          <button type="button" onclick="openAddModal()" class="w-13 h-13 w-[52px] h-[52px] rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-glow-emerald border-4 border-slate-950 font-extrabold text-2xl active:scale-95 transition-transform" aria-label="Create transaction">
+            +
+          </button>
+        </div>
+
+        <!-- History Tab -->
+        <button type="button" onclick="switchTab('history')" id="nav-btn-history" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all py-1 px-3" aria-label="History">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="text-[10px] tracking-tight">History</span>
+        </button>
+
+        <!-- Budget Tab -->
+        <button type="button" onclick="switchTab('budget')" id="nav-btn-budget" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all py-1 px-3" aria-label="Budget and Settings">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="text-[10px] tracking-tight">Budget</span>
+        </button>
+      </nav>
+
+      <!-- Bottom Home Indicator Bar (Mobile Bezel) -->
+      <div id="phone-home-indicator" class="bg-slate-950 py-1.5 flex justify-center">
+        <div class="w-32 h-1 bg-slate-700/60 rounded-full"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= ADD / EDIT TRANSACTION MODAL (SLIDE-UP SHEET) ================= -->
+  <div id="transaction-modal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-4 bg-black/70 backdrop-blur-sm transition-opacity" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="sheet-up w-full max-w-[430px] max-h-[92dvh] overflow-y-auto bg-slate-900 border-t lg:border border-slate-800 rounded-t-[32px] lg:rounded-3xl p-5 text-slate-100 space-y-4 no-scrollbar shadow-2xl">
+
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div>
+          <h3 id="modal-title" class="text-base font-bold text-white tracking-tight">Add Transaction</h3>
+          <p class="text-xs text-slate-400">Record a credit or debit entry</p>
+        </div>
+        <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-lg transition" aria-label="Close dialog">
+          &times;
+        </button>
+      </div>
+
+      <!-- Transaction Form -->
+      <form id="transaction-form" onsubmit="handleSaveTransaction(event)" class="space-y-4">
+        <input type="hidden" id="edit-transaction-id" value="">
+
+        <!-- Type Selector: Debit (Expense) vs Credit (Income) -->
+        <fieldset class="space-y-1.5">
+          <legend class="text-xs font-semibold text-slate-300">Transaction Type <span class="text-rose-400">*</span></legend>
+          <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800">
+            <button type="button" id="type-btn-debit" onclick="setFormType('debit')" class="py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-rose-500 text-white shadow-glow-rose">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+              Debit (Expense)
+            </button>
+            <button type="button" id="type-btn-credit" onclick="setFormType('credit')" class="py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+              Credit (Income)
+            </button>
+          </div>
+        </fieldset>
+
+        <!-- Amount Input -->
+        <div class="space-y-1.5">
+          <label for="form-amount" class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+            <span>Amount <span class="text-rose-400">*</span></span>
+            <span class="text-[11px] text-slate-400">Currency: <strong id="form-curr-label" class="text-emerald-400">$</strong></span>
+          </label>
+          <div class="relative flex items-center">
+            <span id="form-curr-symbol" class="absolute left-3.5 text-xl font-bold font-mono text-slate-400">$</span>
+            <input id="form-amount" name="amount" type="number" step="0.01" min="0.01" required inputmode="decimal" placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-9 pr-4 py-3 text-2xl font-bold font-mono text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+          </div>
+
+          <!-- Quick Amount Increment Chips -->
+          <div class="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+            <button type="button" onclick="addAmountFast(10)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 hover:bg-slate-800">+10</button>
+            <button type="button" onclick="addAmountFast(50)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 hover:bg-slate-800">+50</button>
+            <button type="button" onclick="addAmountFast(100)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 hover:bg-slate-800">+100</button>
+            <button type="button" onclick="addAmountFast(500)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 hover:bg-slate-800">+500</button>
+          </div>
+        </div>
+
+        <!-- Title / Description -->
+        <div class="space-y-1.5">
+          <label for="form-title" class="text-xs font-semibold text-slate-300">Description / Title <span class="text-rose-400">*</span></label>
+          <input id="form-title" name="title" type="text" required placeholder="e.g. Grocery Store, Salary, Uber" maxlength="60" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+
+          <!-- Quick Suggestion Chips -->
+          <div id="quick-title-chips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+            <!-- Dynamically populated based on debit/credit -->
+          </div>
+        </div>
+
+        <!-- Category Grid Selector -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-slate-300">Category <span class="text-rose-400">*</span></label>
+          <div id="category-grid" class="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto p-1 bg-slate-950 rounded-2xl border border-slate-800 no-scrollbar">
+            <!-- Dynamically injected categories -->
+          </div>
+          <input type="hidden" id="form-category" value="Food & Dining">
+        </div>
+
+        <!-- Date & Time Row -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="space-y-1">
+            <label for="form-date" class="text-xs font-semibold text-slate-300">Date <span class="text-rose-400">*</span></label>
+            <input id="form-date" name="date" type="date" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div class="space-y-1">
+            <label for="form-time" class="text-xs font-semibold text-slate-300">Time</label>
+            <input id="form-time" name="time" type="time" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="space-y-1">
+          <label for="form-payment-method" class="text-xs font-semibold text-slate-300">Payment Account / Method</label>
+          <select id="form-payment-method" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="Credit Card">Credit Card</option>
+            <option value="Debit Card">Debit Card</option>
+            <option value="UPI / Wallet">UPI / Digital Wallet</option>
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
+
+        <!-- Optional Notes -->
+        <div class="space-y-1">
+          <label for="form-notes" class="text-xs font-semibold text-slate-300">Notes (Optional)</label>
+          <input id="form-notes" name="notes" type="text" placeholder="Add invoice #, tags, or details..." maxlength="100" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 pt-2">
+          <button type="button" onclick="closeModal()" class="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">
+            Cancel
+          </button>
+          <button type="submit" id="modal-submit-btn" class="flex-1 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shadow-glow-emerald transition active:scale-95">
+            Save Transaction
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+  <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- ================= MAIN APP JAVASCRIPT LOGIC ================= -->
+  <script>
+    /* ==========================================================================
+       APP STATE & CONSTANTS
+       ========================================================================== */
+    const STORAGE_KEY = 'spendwise_transactions_v1';
+    const BUDGET_KEY = 'spendwise_monthly_budget';
+    const CURRENCY_KEY = 'spendwise_currency';
+    const THEME_KEY = 'spendwise_theme';
+
+    let currentCurrency = localStorage.getItem(CURRENCY_KEY) || '$';
+    let currentTheme = localStorage.getItem(THEME_KEY) || 'dark';
+    let currentTab = 'dashboard';
+    let activeVisualSub = 'daily_bars';
+    let activeDateFilter = '7d';
+    let activeHistoryType = 'all';
+    let currentCalendarDate = new Date(2026, 10, 10); // Nov 10, 2026
+    let selectedCalendarDay = '2026-11-10';
+
+    // Categories Configuration
+    const CATEGORIES = {
+      debit: [
+        { id: 'Food & Dining', icon: '🍔', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+        { id: 'Shopping', icon: '🛍️', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+        { id: 'Housing & Rent', icon: '🏠', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)' },
+        { id: 'Transport', icon: '🚗', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+        { id: 'Utilities', icon: '⚡', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
+        { id: 'Entertainment', icon: '🎬', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
+        { id: 'Health & Care', icon: '💊', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+        { id: 'Groceries', icon: '🥦', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+        { id: 'Education', icon: '📚', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+        { id: 'Other Expense', icon: '🏷️', color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
+      ],
+      credit: [
+        { id: 'Salary', icon: '💼', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+        { id: 'Freelance', icon: '💻', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+        { id: 'Investments', icon: '📈', color: '#84cc16', bg: 'rgba(132, 204, 22, 0.15)' },
+        { id: 'Refunds / Gift', icon: '🎁', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
+        { id: 'Other Income', icon: '💰', color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
+      ]
+    };
+
+    const QUICK_TITLES = {
+      debit: ['Groceries', 'Coffee', 'Uber Ride', 'Dinner Out', 'Netflix', 'Pharmacy', 'Electric Bill', 'Amazon Order'],
+      credit: ['Salary Monthly', 'Freelance Project', 'Stock Dividend', 'Bonus', 'Cashback', 'Client Payment']
+    };
+
+    // Realistic Initial Transactions Pre-populated
+    const SAMPLE_TRANSACTIONS = [
+      { id: 'tx-1', type: 'credit', amount: 4850.00, title: 'Monthly Salary Deposit', category: 'Salary', date: '2026-11-01', time: '09:00', paymentMethod: 'Bank Transfer', notes: 'November compensation' },
+      { id: 'tx-2', type: 'debit', amount: 1450.00, title: 'Apartment Monthly Rent', category: 'Housing & Rent', date: '2026-11-01', time: '11:30', paymentMethod: 'Bank Transfer', notes: 'Monthly lease' },
+      { id: 'tx-3', type: 'debit', amount: 112.40, title: 'Trader Joe\'s Groceries', category: 'Groceries', date: '2026-11-02', time: '17:20', paymentMethod: 'Credit Card', notes: 'Weekly grocery run' },
+      { id: 'tx-4', type: 'debit', amount: 18.50, title: 'Morning Espresso & Croissant', category: 'Food & Dining', date: '2026-11-03', time: '08:45', paymentMethod: 'UPI / Wallet' },
+      { id: 'tx-5', type: 'debit', amount: 42.00, title: 'Uber Downtown Office', category: 'Transport', date: '2026-11-03', time: '19:10', paymentMethod: 'Credit Card' },
+      { id: 'tx-6', type: 'debit', amount: 84.50, title: 'High-speed Fiber Internet', category: 'Utilities', date: '2026-11-04', time: '14:00', paymentMethod: 'Debit Card' },
+      { id: 'tx-7', type: 'credit', amount: 650.00, title: 'UI Design Freelance Milestone', category: 'Freelance', date: '2026-11-05', time: '16:30', paymentMethod: 'Bank Transfer' },
+      { id: 'tx-8', type: 'debit', amount: 78.90, title: 'Dinner with Colleagues', category: 'Food & Dining', date: '2026-11-05', time: '20:15', paymentMethod: 'Credit Card' },
+      { id: 'tx-9', type: 'debit', amount: 49.99, title: 'Gym & Fitness Membership', category: 'Health & Care', date: '2026-11-06', time: '10:00', paymentMethod: 'Debit Card' },
+      { id: 'tx-10', type: 'debit', amount: 15.99, title: 'Netflix & Spotify Streaming', category: 'Entertainment', date: '2026-11-06', time: '12:00', paymentMethod: 'Credit Card' },
+      { id: 'tx-11', type: 'debit', amount: 95.20, title: 'Whole Foods Market', category: 'Groceries', date: '2026-11-07', time: '15:40', paymentMethod: 'Credit Card' },
+      { id: 'tx-12', type: 'credit', amount: 140.00, title: 'Index Fund Dividend', category: 'Investments', date: '2026-11-07', time: '11:15', paymentMethod: 'Bank Transfer' },
+      { id: 'tx-13', type: 'debit', amount: 135.00, title: 'Winter Jacket & Apparel', category: 'Shopping', date: '2026-11-08', time: '16:50', paymentMethod: 'Credit Card' },
+      { id: 'tx-14', type: 'debit', amount: 26.50, title: 'Subway & Bus Metro Card', category: 'Transport', date: '2026-11-08', time: '09:20', paymentMethod: 'UPI / Wallet' },
+      { id: 'tx-15', type: 'debit', amount: 62.00, title: 'Pharmacy & Wellness Vitamins', category: 'Health & Care', date: '2026-11-09', time: '14:25', paymentMethod: 'Debit Card' },
+      { id: 'tx-16', type: 'debit', amount: 34.00, title: 'Artisan Pizza Lunch', category: 'Food & Dining', date: '2026-11-09', time: '13:10', paymentMethod: 'UPI / Wallet' },
+      { id: 'tx-17', type: 'credit', amount: 75.00, title: 'Online Order Return Refund', category: 'Refunds / Gift', date: '2026-11-10', time: '10:00', paymentMethod: 'Credit Card' },
+      { id: 'tx-18', type: 'debit', amount: 12.80, title: 'Cold Brew & Matcha Latte', category: 'Food & Dining', date: '2026-11-10', time: '09:15', paymentMethod: 'UPI / Wallet' },
+      { id: 'tx-19', type: 'debit', amount: 56.40, title: 'Fresh Produce & Bakery', category: 'Groceries', date: '2026-11-10', time: '12:30', paymentMethod: 'Debit Card' },    ];
+
+    let transactions = [];
+    let monthlyBudget = parseFloat(localStorage.getItem(BUDGET_KEY)) || 3500;
+
+    /* ==========================================================================
+       INITIALIZATION
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      initStorage();
+      initUI();
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // Register PWA Service Worker if available
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration note:', err));
+      }
+    });
+
+    function initStorage() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        transactions = [...SAMPLE_TRANSACTIONS];
+        saveToStorage();
+      } else {
+        try {
+          transactions = JSON.parse(raw);
+        } catch (e) {
+          transactions = [...SAMPLE_TRANSACTIONS];
+          saveToStorage();
+        }
+      }
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+    }
+
+    function initUI() {
+      // Set currency indicators
+      applyCurrencyToDOM();
+
+      // Populate Category filter in history
+      populateHistoryCategoryFilter();
+
+      // Set default form date & time to today
+      const now = new Date();
+      const todayISO = '2026-11-10'; // fixed reference or real ISO
+      document.getElementById('form-date').value = todayISO;
+      document.getElementById('form-time').value = now.toTimeString().substring(0, 5);
+      document.getElementById('input-monthly-budget').value = monthlyBudget;
+
+      // Render categories for default debit
+      renderCategoryGrid('debit');
+      renderQuickTitles('debit');
+
+      // Refresh all tabs
+      renderDashboard();
+      renderVisualizations();
+      renderHistory();
+      renderBudgetSettings();
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const el = document.getElementById('status-bar-time');
+      if (el) el.textContent = timeStr;
+    }
+
+    /* ==========================================================================
+       CURRENCY & FORMATTING
+       ========================================================================== */
+    function formatMoney(amount) {
+      const num = parseFloat(amount) || 0;
+      return `${currentCurrency}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function changeCurrency(newCurr) {
+      currentCurrency = newCurr;
+      localStorage.setItem(CURRENCY_KEY, newCurr);
+      applyCurrencyToDOM();
+      renderDashboard();
+      renderVisualizations();
+      renderHistory();
+      renderBudgetSettings();
+      showToast(`Base currency updated to ${newCurr}`);
+    }
+
+    function cycleCurrency() {
+      const list = ['$', '₹', '€', '£', '¥', 'C$'];
+      const nextIdx = (list.indexOf(currentCurrency) + 1) % list.length;
+      changeCurrency(list[nextIdx]);
+    }
+
+    function applyCurrencyToDOM() {
+      document.querySelectorAll('#currency-select, #settings-currency-select').forEach(sel => sel.value = currentCurrency);
+      document.getElementById('mobile-curr-indicator').textContent = currentCurrency;
+      document.getElementById('form-curr-symbol').textContent = currentCurrency;
+      document.getElementById('form-curr-label').textContent = currentCurrency;
+      document.getElementById('budget-curr-symbol').textContent = currentCurrency;
+    }
+
+    /* ==========================================================================
+       VIEW & THEME SWITCHING
+       ========================================================================== */
+    function setDeviceView(mode) {
+      const container = document.getElementById('device-container');
+      const wrapper = document.getElementById('app-wrapper');
+      const hardware = document.getElementById('phone-hardware');
+      const homeInd = document.getElementById('phone-home-indicator');
+      const btnPhone = document.getElementById('view-mode-phone');
+      const btnFull = document.getElementById('view-mode-full');
+
+      if (mode === 'full') {
+        container.classList.remove('max-w-[420px]', 'lg:h-[880px]', 'lg:rounded-[48px]', 'lg:shadow-device', 'lg:border-[6px]');
+        container.classList.add('max-w-4xl', 'lg:rounded-2xl', 'lg:shadow-2xl', 'h-[92dvh]');
+        hardware.classList.add('hidden');
+        homeInd.classList.add('hidden');
+        btnFull.classList.add('bg-emerald-500', 'text-slate-950', 'font-bold');
+        btnFull.classList.remove('text-slate-400');
+        btnPhone.classList.remove('bg-emerald-500', 'text-slate-950', 'font-bold');
+        btnPhone.classList.add('text-slate-400');
+      } else {
+        container.classList.add('max-w-[420px]', 'lg:h-[880px]', 'lg:rounded-[48px]', 'lg:shadow-device', 'lg:border-[6px]');
+        container.classList.remove('max-w-4xl', 'lg:rounded-2xl', 'lg:shadow-2xl', 'h-[92dvh]');
+        hardware.classList.remove('hidden');
+        homeInd.classList.remove('hidden');
+        btnPhone.classList.add('bg-emerald-500', 'text-slate-950', 'font-bold');
+        btnPhone.classList.remove('text-slate-400');
+        btnFull.classList.remove('bg-emerald-500', 'text-slate-950', 'font-bold');
+        btnFull.classList.add('text-slate-400');
+      }
+    }
+
+    function toggleTheme() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, currentTheme);
+      applyTheme();
+    }
+
+    function applyTheme() {
+      const isDark = currentTheme === 'dark';
+      document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+      document.getElementById('settings-theme-label').textContent = isDark ? '🌙 OLED Dark' : '☀️ Clean Light';
+      if (!isDark) {
+        document.body.classList.remove('bg-slate-900', 'text-slate-100');
+        document.body.classList.add('bg-slate-100', 'text-slate-900');
+      } else {
+        document.body.classList.add('bg-slate-900', 'text-slate-100');
+        document.body.classList.remove('bg-slate-100', 'text-slate-900');
+      }
+    }
+
+    /* ==========================================================================
+       NAVIGATION & TABS
+       ========================================================================== */
+    function switchTab(tabId) {
+      currentTab = tabId;
+      const tabs = ['dashboard', 'analytics', 'history', 'budget'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (t === tabId) {
+          sec.classList.remove('hidden');
+          btn.classList.add('text-emerald-400', 'font-bold');
+          btn.classList.remove('text-slate-400');
+        } else {
+          sec.classList.add('hidden');
+          btn.classList.remove('text-emerald-400', 'font-bold');
+          btn.classList.add('text-slate-400');
+        }
+      });
+
+      // Scroll top of body
+      document.getElementById('main-content-scroll').scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Refresh corresponding tab views
+      if (tabId === 'dashboard') renderDashboard();
+      if (tabId === 'analytics') renderVisualizations();
+      if (tabId === 'history') renderHistory();
+      if (tabId === 'budget') renderBudgetSettings();
+    }
+
+    function setVisualSubView(sub) {
+      activeVisualSub = sub;
+      const subs = ['daily_bars', 'cashflow', 'categories', 'calendar'];
+      subs.forEach(s => {
+        const btn = document.getElementById(`vsub-${s}`);
+        const view = document.getElementById(`view-${s.replace('_', '-')}`);
+        if (s === sub) {
+          btn.classList.add('bg-emerald-500', 'text-slate-950', 'font-bold');
+          btn.classList.remove('text-slate-400');
+          if (view) view.classList.remove('hidden');
+        } else {
+          btn.classList.remove('bg-emerald-500', 'text-slate-950', 'font-bold');
+          btn.classList.add('text-slate-400');
+          if (view) view.classList.add('hidden');
+        }
+      });
+      renderVisualizations();
+    }
+
+    function setDateFilter(filter) {
+      activeDateFilter = filter;
+      document.querySelectorAll('.date-filter-pill').forEach(btn => {
+        btn.classList.remove('bg-emerald-500', 'text-slate-950');
+        btn.classList.add('bg-slate-900', 'text-slate-400', 'border', 'border-slate-800');
+      });
+      const activeBtn = document.getElementById(`btn-filter-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-emerald-500', 'text-slate-950');
+        activeBtn.classList.remove('bg-slate-900', 'text-slate-400', 'border');
+      }
+      renderVisualizations();
+    }
+
+    /* ==========================================================================
+       TAB 1: DASHBOARD RENDERING
+       ========================================================================== */
+    function renderDashboard() {
+      // Calculate totals
+      let totalCredit = 0;
+      let totalDebit = 0;
+      let creditCount = 0;
+      let debitCount = 0;
+
+      transactions.forEach(t => {
+        const amt = parseFloat(t.amount) || 0;
+        if (t.type === 'credit') {
+          totalCredit += amt;
+          creditCount++;
+        } else {
+          totalDebit += amt;
+          debitCount++;
+        }
+      });
+
+      const netBalance = totalCredit - totalDebit;
+
+      // Update DOM
+      const netEl = document.getElementById('net-balance-display');
+      netEl.textContent = formatMoney(netBalance);
+      netEl.className = `text-3xl font-extrabold tracking-tight font-mono ${netBalance >= 0 ? 'text-white' : 'text-rose-400'}`;
+
+      document.getElementById('total-credit-display').textContent = `+${formatMoney(totalCredit)}`;
+      document.getElementById('credit-count-text').textContent = `${creditCount} credit entries`;
+
+      document.getElementById('total-debit-display').textContent = `-${formatMoney(totalDebit)}`;
+      document.getElementById('debit-count-text').textContent = `${debitCount} debit entries`;
+
+      // Savings Rate
+      const savingsBadge = document.getElementById('savings-rate-badge');
+      if (totalCredit > 0) {
+        const rate = Math.max(0, ((totalCredit - totalDebit) / totalCredit) * 100).toFixed(1);
+        savingsBadge.textContent = `+${rate}% Saved`;
+      } else {
+        savingsBadge.textContent = '0% Saved';
+      }
+
+      // Monthly Budget Progress
+      const budgetRatioText = document.getElementById('budget-ratio-text');
+      const budgetBar = document.getElementById('budget-progress-bar');
+      const budgetStatus = document.getElementById('budget-status-text');
+      const budgetRemaining = document.getElementById('budget-remaining-text');
+
+      const pct = monthlyBudget > 0 ? Math.min(100, Math.round((totalDebit / monthlyBudget) * 100)) : 0;
+      budgetRatioText.textContent = `${formatMoney(totalDebit)} / ${formatMoney(monthlyBudget)}`;
+      budgetBar.style.width = `${pct}%`;
+
+      if (pct > 90) {
+        budgetBar.className = 'h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full transition-all duration-500';
+        budgetStatus.textContent = '⚠️ Close to limit!';
+        budgetStatus.className = 'text-rose-400 font-semibold';
+      } else {
+        budgetBar.className = 'h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500';
+        budgetStatus.textContent = 'Safe spending pace';
+        budgetStatus.className = 'text-slate-400';
+      }
+
+      const remaining = Math.max(0, monthlyBudget - totalDebit);
+      budgetRemaining.textContent = `${formatMoney(remaining)} remaining`;
+
+      // Render 7-day sparkline
+      renderDashboardSparkline();
+
+      // Render latest 5 recent transactions
+      renderRecentTransactions();
+    }
+
+    function renderDashboardSparkline() {
+      const container = document.getElementById('mini-sparkline-container');
+      container.innerHTML = '';
+
+      // Last 7 days dates ending at 2026-11-10
+      const days = [];
+      const baseDate = new Date(2026, 10, 10);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(baseDate);
+        d.setDate(baseDate.getDate() - i);
+        const iso = d.toISOString().split('T')[0];
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'narrow' });
+        days.push({ iso, dayLabel, isToday: i === 0 });
+      }
+
+      // Sum debits per day
+      let maxDebit = 1;
+      days.forEach(day => {
+        const dayDebits = transactions
+          .filter(t => t.date === day.iso && t.type === 'debit')
+          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        day.debit = dayDebits;
+        if (dayDebits > maxDebit) maxDebit = dayDebits;
+      });
+
+      // Render mini bars
+      days.forEach(day => {
+        const heightPct = Math.max(12, Math.round((day.debit / maxDebit) * 100));
+        const col = document.createElement('div');
+        col.className = 'flex-1 flex flex-col items-center gap-1 group cursor-pointer';
+        col.onclick = () => {
+          selectedCalendarDay = day.iso;
+          switchTab('analytics');
+          setVisualSubView('calendar');
+        };
+
+        col.innerHTML = `
+          <span class="text-[9px] font-mono text-slate-400 group-hover:text-white transition opacity-0 group-hover:opacity-100">${formatMoney(day.debit)}</span>
+          <div class="w-full h-16 bg-slate-950 rounded-xl overflow-hidden flex items-end p-0.5 border border-slate-800">
+            <div class="w-full rounded-lg transition-all duration-300 ${day.isToday ? 'bg-gradient-to-t from-emerald-500 to-teal-400' : 'bg-gradient-to-t from-slate-700 to-slate-500 group-hover:from-rose-500 group-hover:to-amber-500'}" style="height: ${heightPct}%;"></div>
+          </div>
+          <span class="text-[10px] ${day.isToday ? 'font-bold text-emerald-400' : 'text-slate-400'}">${day.dayLabel}</span>
+        `;
+        container.appendChild(col);
+      });
+    }
+
+    function renderRecentTransactions() {
+      const container = document.getElementById('recent-transactions-list');
+      container.innerHTML = '';
+
+      // Sort newest date & time
+      const sorted = [...transactions].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      const recent = sorted.slice(0, 5);
+
+      if (recent.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-500">No transactions recorded yet. Tap + to add.</div>`;
+        return;
+      }
+
+      recent.forEach(t => {
+        const catInfo = getCategoryMeta(t.category, t.type);
+        const isCredit = t.type === 'credit';
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-2xl bg-slate-900 hover:bg-slate-850 border border-slate-800/80 flex items-center justify-between transition cursor-pointer active:scale-98';
+        card.onclick = () => openEditModal(t.id);
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shadow-sm" style="background: ${catInfo.bg}; border: 1px solid ${catInfo.color}33;">
+              ${catInfo.icon}
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-200">${escapeHTML(t.title)}</p>
+              <p class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                <span>${t.category}</span>
+                <span>•</span>
+                <span>${formatFriendlyDate(t.date)}</span>
+              </p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-mono font-bold ${isCredit ? 'text-emerald-400' : 'text-rose-400'}">
+              ${isCredit ? '+' : '-'}${formatMoney(t.amount)}
+            </p>
+            <p class="text-[9px] text-slate-500 mt-0.5">${t.paymentMethod || 'Card'}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    /* ==========================================================================
+       TAB 2: DATE-WISE VISUALIZATIONS & CHARTS
+       ========================================================================== */
+    function filterTransactionsByRange(list, range) {
+      const ref = new Date(2026, 10, 10); // Nov 10, 2026
+      return list.filter(t => {
+        const tDate = new Date(t.date + 'T12:00:00');
+        const diffDays = Math.floor((ref - tDate) / (1000 * 60 * 60 * 24));
+
+        if (range === '7d') return diffDays >= 0 && diffDays < 7;
+        if (range === '30d') return diffDays >= 0 && diffDays < 30;
+        if (range === 'this_month') return tDate.getFullYear() === ref.getFullYear() && tDate.getMonth() === ref.getMonth();
+        if (range === 'last_month') {
+          const lastMonth = new Date(ref);
+          lastMonth.setMonth(ref.getMonth() - 1);
+          return tDate.getFullYear() === lastMonth.getFullYear() && tDate.getMonth() === lastMonth.getMonth();
+        }
+        return true; // all
+      });
+    }
+
+    function renderVisualizations() {
+      const filtered = filterTransactionsByRange(transactions, activeDateFilter);
+
+      // Period Metrics
+      let periodDebit = 0;
+      let periodCredit = 0;
+      const dayDebitMap = {};
+
+      filtered.forEach(t => {
+        const amt = parseFloat(t.amount) || 0;
+        if (t.type === 'debit') {
+          periodDebit += amt;
+          dayDebitMap[t.date] = (dayDebitMap[t.date] || 0) + amt;
+        } else {
+          periodCredit += amt;
+        }
+      });
+
+      const activeDays = Object.keys(dayDebitMap).length || 1;
+      const avgDaily = periodDebit / activeDays;
+      let peakDaily = 0;
+      Object.values(dayDebitMap).forEach(v => {
+        if (v > peakDaily) peakDaily = v;
+      });
+
+      document.getElementById('range-total-spent').textContent = formatMoney(periodDebit);
+      document.getElementById('range-avg-spent').textContent = formatMoney(avgDaily);
+      document.getElementById('range-peak-spent').textContent = formatMoney(peakDaily);
+
+      // Render active sub-view
+      if (activeVisualSub === 'daily_bars') {
+        renderDailyBarChart(filtered, activeDateFilter);
+      } else if (activeVisualSub === 'cashflow') {
+        renderCashFlowChart(filtered, periodCredit, periodDebit);
+      } else if (activeVisualSub === 'categories') {
+        renderCategoryDonut(filtered, periodDebit);
+      } else if (activeVisualSub === 'calendar') {
+        renderCalendar();
+      }
+    }
+
+    function renderDailyBarChart(list, range) {
+      const container = document.getElementById('daily-bar-chart-container');
+      container.innerHTML = '';
+
+      // Determine date points
+      let daysCount = 7;
+      if (range === '30d' || range === 'this_month' || range === 'last_month') daysCount = 14;
+      if (range === 'all') daysCount = 10;
+
+      const datePoints = [];
+      const ref = new Date(2026, 10, 10);
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date(ref);
+        d.setDate(ref.getDate() - i);
+        const iso = d.toISOString().split('T')[0];
+        datePoints.push({
+          iso,
+          label: d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+          weekday: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
+          isToday: i === 0
+        });
+      }
+
+      // Aggregate debits per datePoint
+      let maxAmount = 1;
+      datePoints.forEach(pt => {
+        const dayTotal = list
+          .filter(t => t.date === pt.iso && t.type === 'debit')
+          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        pt.total = dayTotal;
+        if (dayTotal > maxAmount) maxAmount = dayTotal;
+      });
+
+      // Render SVG / CSS Bar Columns
+      datePoints.forEach(pt => {
+        const heightPct = Math.max(8, Math.round((pt.total / maxAmount) * 100));
+        const col = document.createElement('div');
+        col.className = 'flex-1 flex flex-col items-center h-full justify-end group cursor-pointer relative';
+
+        col.innerHTML = `
+          <!-- Value on top of bar -->
+          <span class="text-[9px] font-mono text-slate-400 group-hover:text-rose-400 font-bold mb-1 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            ${pt.total > 0 ? formatMoney(pt.total) : ''}
+          </span>
+          <!-- Bar body -->
+          <div class="w-full max-w-[28px] h-36 bg-slate-950 rounded-xl overflow-hidden p-0.5 border border-slate-800 flex items-end">
+            <div class="w-full rounded-lg chart-bar transition-all duration-300 ${pt.isToday ? 'bg-gradient-to-t from-emerald-500 to-teal-400' : 'bg-gradient-to-t from-rose-600 to-amber-500'}" style="height: ${heightPct}%;"></div>
+          </div>
+          <!-- Date label bottom -->
+          <span class="text-[9px] text-slate-400 mt-1.5 ${pt.isToday ? 'font-bold text-emerald-400' : ''}">${pt.label}</span>
+        `;
+
+        // Click / touch handler
+        col.onclick = () => {
+          showTooltipForDate(pt.iso, pt.total);
+          selectedCalendarDay = pt.iso;
+        };
+
+        container.appendChild(col);
+      });
+    }
+
+    function showTooltipForDate(dateISO, amount) {
+      const tooltip = document.getElementById('chart-tooltip');
+      const dateEl = document.getElementById('tooltip-date');
+      const amtEl = document.getElementById('tooltip-amount');
+
+      dateEl.textContent = formatFriendlyDate(dateISO);
+      amtEl.textContent = `Spent: ${formatMoney(amount)}`;
+
+      tooltip.classList.remove('hidden');
+      clearTimeout(window.__tooltipTimer);
+      window.__tooltipTimer = setTimeout(() => {
+        tooltip.classList.add('hidden');
+      }, 3000);
+    }
+
+    function renderCashFlowChart(list, totalCredit, totalDebit) {
+      const container = document.getElementById('cashflow-chart-container');
+      container.innerHTML = '';
+
+      const maxVal = Math.max(totalCredit, totalDebit, 1);
+      const creditHeightPct = Math.max(10, Math.round((totalCredit / maxVal) * 100));
+      const debitHeightPct = Math.max(10, Math.round((totalDebit / maxVal) * 100));
+
+      const net = totalCredit - totalDebit;
+      document.getElementById('cashflow-net-val').textContent = `${net >= 0 ? '+' : ''}${formatMoney(net)}`;
+      document.getElementById('cashflow-net-val').className = `font-mono font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      container.innerHTML = `
+        <!-- Credit Inflow Pillar -->
+        <div class="flex-1 flex flex-col items-center h-full justify-end max-w-[120px]">
+          <span class="text-xs font-mono font-bold text-emerald-400 mb-1">+${formatMoney(totalCredit)}</span>
+          <div class="w-full h-40 bg-slate-950 rounded-2xl overflow-hidden p-1 border border-emerald-500/30 flex items-end shadow-glow-emerald">
+            <div class="w-full bg-gradient-to-t from-emerald-600 to-teal-400 rounded-xl transition-all duration-500" style="height: ${creditHeightPct}%;"></div>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 mt-2">Income (Credit)</span>
+        </div>
+
+        <!-- Debit Outflow Pillar -->
+        <div class="flex-1 flex flex-col items-center h-full justify-end max-w-[120px]">
+          <span class="text-xs font-mono font-bold text-rose-400 mb-1">-${formatMoney(totalDebit)}</span>
+          <div class="w-full h-40 bg-slate-950 rounded-2xl overflow-hidden p-1 border border-rose-500/30 flex items-end shadow-glow-rose">
+            <div class="w-full bg-gradient-to-t from-rose-600 to-amber-500 rounded-xl transition-all duration-500" style="height: ${debitHeightPct}%;"></div>
+          </div>
+          <span class="text-xs font-bold text-rose-400 mt-2">Expense (Debit)</span>
+        </div>
+      `;
+    }
+
+    function renderCategoryDonut(list, totalSpent) {
+      const svg = document.getElementById('category-donut-svg');
+      const legend = document.getElementById('category-legend-list');
+      svg.innerHTML = '';
+      legend.innerHTML = '';
+
+      document.getElementById('donut-center-amount').textContent = formatMoney(totalSpent);
+
+      // Aggregate debits by category
+      const catTotals = {};
+      list.filter(t => t.type === 'debit').forEach(t => {
+        catTotals[t.category] = (catTotals[t.category] || 0) + parseFloat(t.amount);
+      });
+
+      const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+      if (sortedCats.length === 0 || totalSpent <= 0) {
+        svg.innerHTML = `<circle cx="50" cy="50" r="38" fill="none" stroke="#334155" stroke-width="14" />`;
+        legend.innerHTML = `<div class="text-center text-xs text-slate-500 py-3">No expenses found for this date range.</div>`;
+        return;
+      }
+
+      // Draw SVG donut ring segments
+      let cumulativeAngle = 0;
+      const radius = 38;
+      const circumference = 2 * Math.PI * radius;
+
+      sortedCats.forEach(([catName, amount]) => {
+        const pct = amount / totalSpent;
+        const strokeDash = pct * circumference;
+        const strokeOffset = circumference - strokeDash;
+        const meta = getCategoryMeta(catName, 'debit');
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '50');
+        circle.setAttribute('cy', '50');
+        circle.setAttribute('r', radius.toString());
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', meta.color);
+        circle.setAttribute('stroke-width', '13');
+        circle.setAttribute('stroke-dasharray', `${strokeDash} ${circumference}`);
+        circle.setAttribute('stroke-dashoffset', (-cumulativeAngle).toString());
+        circle.setAttribute('class', 'transition-all duration-300 hover:opacity-80 cursor-pointer');
+
+        // Tooltip interaction
+        circle.onclick = () => {
+          showToast(`${catName}: ${formatMoney(amount)} (${(pct * 100).toFixed(1)}%)`);
+        };
+
+        svg.appendChild(circle);
+        cumulativeAngle += strokeDash;
+
+        // Add to legend
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between text-xs py-1.5 px-2 rounded-xl hover:bg-slate-800/60 transition';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background: ${meta.color};"></span>
+            <span class="text-slate-200 font-medium">${meta.icon} ${catName}</span>
+          </div>
+          <div class="text-right font-mono">
+            <span class="font-bold text-slate-100">${formatMoney(amount)}</span>
+            <span class="text-[10px] text-slate-400 ml-1">(${(pct * 100).toFixed(0)}%)</span>
+          </div>
+        `;
+        legend.appendChild(item);
+      });
+    }
+
+    /* ==========================================================================
+       CALENDAR VIEW & DATE DRILLDOWN
+       ========================================================================== */
+    function renderCalendar() {
+      const monthLabel = document.getElementById('calendar-month-label');
+      const grid = document.getElementById('calendar-days-grid');
+      grid.innerHTML = '';
+
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      monthLabel.textContent = currentCalendarDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+      const firstDayIdx = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // Pad previous month empty cells
+      for (let i = 0; i < firstDayIdx; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'h-10 opacity-20';
+        grid.appendChild(empty);
+      }
+
+      // Populate days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayTxs = transactions.filter(t => t.date === dateISO);
+        const hasDebit = dayTxs.some(t => t.type === 'debit');
+        const hasCredit = dayTxs.some(t => t.type === 'credit');
+        const isSelected = selectedCalendarDay === dateISO;
+        const isToday = dateISO === '2026-11-10';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `h-10 rounded-xl flex flex-col items-center justify-center relative transition ${isSelected ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'hover:bg-slate-800 text-slate-300'} ${isToday && !isSelected ? 'border border-emerald-500/50' : ''}`;
+        btn.onclick = () => {
+          selectedCalendarDay = dateISO;
+          renderCalendar();
+          renderCalendarDayDetail(dateISO);
+        };
+
+        btn.innerHTML = `
+          <span class="text-[11px] leading-none">${day}</span>
+          <div class="flex items-center gap-0.5 mt-1">
+            ${hasDebit ? `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-rose-950' : 'bg-rose-500'}"></span>` : ''}
+            ${hasCredit ? `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-950' : 'bg-emerald-400'}"></span>` : ''}
+          </div>
+        `;
+        grid.appendChild(btn);
+      }
+
+      renderCalendarDayDetail(selectedCalendarDay);
+    }
+
+    function prevMonth() {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+      renderCalendar();
+    }
+
+    function renderCalendarDayDetail(dateISO) {
+      const label = document.getElementById('cal-selected-date-text');
+      const netEl = document.getElementById('cal-selected-day-net');
+      const listEl = document.getElementById('cal-selected-transactions');
+
+      label.textContent = formatFriendlyDate(dateISO);
+
+      const dayTxs = transactions.filter(t => t.date === dateISO);
+      listEl.innerHTML = '';
+
+      if (dayTxs.length === 0) {
+        netEl.textContent = '$0.00';
+        netEl.className = 'font-mono text-slate-500';
+        listEl.innerHTML = `<div class="text-slate-500 text-center py-2 text-[11px]">No transactions on this date.</div>`;
+        return;
+      }
+
+      let net = 0;
+      dayTxs.forEach(t => {
+        const amt = parseFloat(t.amount);
+        if (t.type === 'credit') net += amt;
+        else net -= amt;
+
+        const isCredit = t.type === 'credit';
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs">${isCredit ? '🟢' : '🔴'}</span>
+            <span class="font-medium text-slate-200 text-xs">${escapeHTML(t.title)}</span>
+          </div>
+          <span class="font-mono font-bold text-xs ${isCredit ? 'text-emerald-400' : 'text-rose-400'}">
+            ${isCredit ? '+' : '-'}${formatMoney(t.amount)}
+          </span>
+        `;
+        listEl.appendChild(item);
+      });
+
+      netEl.textContent = `${net >= 0 ? '+' : ''}${formatMoney(net)}`;
+      netEl.className = `font-mono font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+
+    /* ==========================================================================
+       TAB 3: TRANSACTION HISTORY & LEDGER
+       ========================================================================== */
+    let historySearchQuery = '';
+    let historyCategoryFilter = 'all';
+    let historySort = 'date-desc';
+
+    function setHistoryTypeFilter(type) {
+      activeHistoryType = type;
+      ['all', 'debit', 'credit'].forEach(t => {
+        const btn = document.getElementById(`hist-pill-${t}`);
+        if (t === type) {
+          btn.className = `flex-1 py-1.5 rounded-xl text-xs font-semibold ${t === 'credit' ? 'bg-emerald-500 text-slate-950' : t === 'debit' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-slate-950'} transition`;
+        } else {
+          btn.className = 'flex-1 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition';
+        }
+      });
+      renderHistory();
+    }
+
+    function handleSearchChange(val) {
+      historySearchQuery = val.trim().toLowerCase();
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (historySearchQuery) clearBtn.classList.remove('hidden');
+      else clearBtn.classList.add('hidden');
+      renderHistory();
+    }
+
+    function clearSearch() {
+      document.getElementById('history-search').value = '';
+      historySearchQuery = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      renderHistory();
+    }
+
+    function handleCategoryFilterChange(val) {
+      historyCategoryFilter = val;
+      renderHistory();
+    }
+
+    function handleSortChange(val) {
+      historySort = val;
+      renderHistory();
+    }
+
+    function populateHistoryCategoryFilter() {
+      const select = document.getElementById('history-category-filter');
+      select.innerHTML = '<option value="all">All Categories</option>';
+      const allCats = [...CATEGORIES.debit, ...CATEGORIES.credit];
+      allCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.icon} ${c.id}`;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderHistory() {
+      const feed = document.getElementById('history-feed');
+      feed.innerHTML = '';
+
+      // 1. Filter
+      let filtered = transactions.filter(t => {
+        // Type filter
+        if (activeHistoryType !== 'all' && t.type !== activeHistoryType) return false;
+        // Category filter
+        if (historyCategoryFilter !== 'all' && t.category !== historyCategoryFilter) return false;
+        // Search text
+        if (historySearchQuery) {
+          const matchTitle = (t.title || '').toLowerCase().includes(historySearchQuery);
+          const matchCat = (t.category || '').toLowerCase().includes(historySearchQuery);
+          const matchNote = (t.notes || '').toLowerCase().includes(historySearchQuery);
+          const matchMethod = (t.paymentMethod || '').toLowerCase().includes(historySearchQuery);
+          if (!matchTitle && !matchCat && !matchNote && !matchMethod) return false;
+        }
+        return true;
+      });
+
+      // 2. Sort
+      filtered.sort((a, b) => {
+        if (historySort === 'date-desc') return (b.date + b.time).localeCompare(a.date + a.time);
+        if (historySort === 'date-asc') return (a.date + a.time).localeCompare(b.date + b.time);
+        if (historySort === 'amount-desc') return parseFloat(b.amount) - parseFloat(a.amount);
+        if (historySort === 'amount-asc') return parseFloat(a.amount) - parseFloat(b.amount);
+        return 0;
+      });
+
+      if (filtered.length === 0) {
+        feed.innerHTML = `
+          <div class="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 space-y-2">
+            <span class="text-2xl">🔍</span>
+            <p class="text-xs font-bold text-slate-300">No matching transactions</p>
+            <p class="text-[11px] text-slate-500">Try adjusting your filters or search term</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 3. Group by Date
+      const groups = {};
+      filtered.forEach(t => {
+        if (!groups[t.date]) groups[t.date] = [];
+        groups[t.date].push(t);
+      });
+
+      Object.entries(groups).forEach(([dateStr, items]) => {
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'space-y-2';
+
+        // Calculate day net total
+        const dayNet = items.reduce((acc, cur) => cur.type === 'credit' ? acc + parseFloat(cur.amount) : acc - parseFloat(cur.amount), 0);
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between text-xs font-bold px-1 text-slate-400';
+        header.innerHTML = `
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/></svg>
+            ${formatFriendlyDate(dateStr)}
+          </span>
+          <span class="font-mono text-[11px] ${dayNet >= 0 ? 'text-emerald-400' : 'text-slate-400'}">
+            Day Net: ${dayNet >= 0 ? '+' : ''}${formatMoney(dayNet)}
+          </span>
+        `;
+        groupContainer.appendChild(header);
+
+        // Transaction items
+        items.forEach(t => {
+          const isCredit = t.type === 'credit';
+          const meta = getCategoryMeta(t.category, t.type);
+
+          const card = document.createElement('div');
+          card.className = 'p-3 rounded-2xl bg-slate-900 border border-slate-800/80 flex items-center justify-between transition hover:border-slate-700';
+
+          card.innerHTML = `
+            <div class="flex items-center gap-3 cursor-pointer flex-1" onclick="openEditModal('${t.id}')">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0" style="background: ${meta.bg}; border: 1px solid ${meta.color}33;">
+                ${meta.icon}
+              </div>
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-bold text-slate-200 truncate">${escapeHTML(t.title)}</p>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                  <span class="truncate">${t.category}</span>
+                  <span>•</span>
+                  <span>${t.time || '12:00'}</span>
+                  <span>•</span>
+                  <span class="px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono text-slate-300">${t.paymentMethod || 'Card'}</span>
+                </div>
+                ${t.notes ? `<p class="text-[10px] text-slate-500 italic mt-0.5 truncate">"${escapeHTML(t.notes)}"</p>` : ''}
+              </div>
+            </div>
+
+            <!-- Amount & Quick Actions -->
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="text-right">
+                <p class="text-xs font-mono font-bold ${isCredit ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isCredit ? '+' : '-'}${formatMoney(t.amount)}
+                </p>
+              </div>
+
+              <!-- Delete / Context button -->
+              <button type="button" onclick="deleteTransaction('${t.id}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Delete">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          `;
+          groupContainer.appendChild(card);
+        });
+
+        feed.appendChild(groupContainer);
+      });
+    }
+
+    /* ==========================================================================
+       TAB 4: BUDGETS & SETTINGS
+       ========================================================================== */
+    function renderBudgetSettings() {
+      document.getElementById('storage-record-count').textContent = `${transactions.length} records`;
+      document.getElementById('input-monthly-budget').value = monthlyBudget;
+    }
+
+    function saveMonthlyBudget() {
+      const val = parseFloat(document.getElementById('input-monthly-budget').value) || 0;
+      if (val <= 0) {
+        showToast('Please enter a valid monthly budget amount');
+        return;
+      }
+      monthlyBudget = val;
+      localStorage.setItem(BUDGET_KEY, val);
+      renderDashboard();
+      showToast(`Monthly budget set to ${formatMoney(val)}`);
+    }
+
+    function exportTransactionsCSV() {
+      if (transactions.length === 0) {
+        showToast('No transactions to export');
+        return;
+      }
+      const headers = ['ID', 'Type', 'Amount', 'Currency', 'Title', 'Category', 'Date', 'Time', 'PaymentMethod', 'Notes'];
+      const rows = transactions.map(t => [
+        t.id,
+        t.type,
+        t.amount,
+        currentCurrency,
+        `"${(t.title || '').replace(/"/g, '""')}"`,
+        `"${(t.category || '').replace(/"/g, '""')}"`,
+        t.date,
+        t.time || '',
+        `"${(t.paymentMethod || '').replace(/"/g, '""')}"`,
+        `"${(t.notes || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `SpendWise_Export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Transactions exported to CSV!');
+    }
+
+    function exportTransactionsJSON() {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({
+        currency: currentCurrency,
+        monthlyBudget,
+        transactions
+      }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `SpendWise_Backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('JSON backup saved!');
+    }
+
+    function importTransactionsJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed.transactions)) {
+            transactions = parsed.transactions;
+            if (parsed.monthlyBudget) monthlyBudget = parsed.monthlyBudget;
+            if (parsed.currency) currentCurrency = parsed.currency;
+            saveToStorage();
+            initUI();
+            showToast(`Restored ${transactions.length} transactions!`);
+          } else {
+            showToast('Invalid backup JSON format');
+          }
+        } catch (err) {
+          showToast('Failed to parse JSON file');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function confirmResetData() {
+      if (confirm('Reset to realistic sample transactions? Any custom data will be replaced.')) {
+        transactions = [...SAMPLE_TRANSACTIONS];
+        saveToStorage();
+        initUI();
+        showToast('Reset to sample dataset!');
+      }
+    }
+    function confirmClearAllData() {
+      if (confirm('Are you sure you want to delete ALL transactions? This cannot be undone.')) {
+        transactions = [];
+        saveToStorage();
+        initUI();
+        showToast('All transaction records cleared');
+      }
+    }
+
+    /* ==========================================================================
+       TRANSACTION MODAL & CRUD
+       ========================================================================== */
+    let activeFormType = 'debit';
+
+    function setFormType(type) {
+      activeFormType = type;
+      const debitBtn = document.getElementById('type-btn-debit');
+      const creditBtn = document.getElementById('type-btn-credit');
+
+      if (type === 'debit') {
+        debitBtn.className = 'py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-rose-500 text-white shadow-glow-rose';
+        creditBtn.className = 'py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white';
+      } else {
+        creditBtn.className = 'py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-500 text-slate-950 shadow-glow-emerald';
+        debitBtn.className = 'py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white';
+      }
+
+      renderCategoryGrid(type);
+      renderQuickTitles(type);
+    }
+
+    function renderCategoryGrid(type) {
+      const grid = document.getElementById('category-grid');
+      grid.innerHTML = '';
+      const list = CATEGORIES[type];
+
+      list.forEach((c, idx) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = `p-2 rounded-xl border flex flex-col items-center gap-1 transition text-center ${idx === 0 ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800'}`;
+        item.onclick = () => selectCategory(c.id, item);
+
+        item.innerHTML = `
+          <span class="text-base">${c.icon}</span>
+          <span class="text-[10px] font-medium text-slate-300 truncate w-full">${c.id}</span>
+        `;
+        grid.appendChild(item);
+      });
+
+      // Default to first
+      document.getElementById('form-category').value = list[0].id;
+    }
+
+    function selectCategory(catId, btnElement) {
+      document.getElementById('form-category').value = catId;
+      document.querySelectorAll('#category-grid button').forEach(b => {
+        b.className = 'p-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 flex flex-col items-center gap-1 transition text-center';
+      });
+      btnElement.className = 'p-2 rounded-xl border border-emerald-500 bg-emerald-500/10 flex flex-col items-center gap-1 transition text-center';
+    }
+
+    function renderQuickTitles(type) {
+      const container = document.getElementById('quick-title-chips');
+      container.innerHTML = '';
+      const titles = QUICK_TITLES[type] || [];
+      titles.forEach(t => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300 whitespace-nowrap hover:bg-slate-800 transition';
+        chip.textContent = t;
+        chip.onclick = () => {
+          document.getElementById('form-title').value = t;
+        };
+        container.appendChild(chip);
+      });
+    }
+
+    function addAmountFast(increment) {
+      const input = document.getElementById('form-amount');
+      const cur = parseFloat(input.value) || 0;
+      input.value = (cur + increment).toFixed(2);
+    }
+
+    function openAddModal(preselectedType = 'debit') {
+      document.getElementById('modal-title').textContent = 'Add Transaction';
+      document.getElementById('edit-transaction-id').value = '';
+      document.getElementById('form-amount').value = '';
+      document.getElementById('form-title').value = '';
+      document.getElementById('form-notes').value = '';
+      document.getElementById('form-date').value = '2026-11-10';
+      document.getElementById('form-time').value = new Date().toTimeString().substring(0, 5);
+
+      setFormType(preselectedType);
+
+      document.getElementById('transaction-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('form-amount').focus(), 100);
+    }
+
+    function openEditModal(txId) {
+      const tx = transactions.find(t => t.id === txId);
+      if (!tx) return;
+
+      document.getElementById('modal-title').textContent = 'Edit Transaction';
+      document.getElementById('edit-transaction-id').value = tx.id;
+      document.getElementById('form-amount').value = tx.amount;
+      document.getElementById('form-title').value = tx.title;
+      document.getElementById('form-notes').value = tx.notes || '';
+      document.getElementById('form-date').value = tx.date;
+      document.getElementById('form-time').value = tx.time || '12:00';
+      document.getElementById('form-payment-method').value = tx.paymentMethod || 'Credit Card';
+
+      setFormType(tx.type);
+
+      // Select category
+      document.getElementById('form-category').value = tx.category;
+      document.querySelectorAll('#category-grid button').forEach(b => {
+        if (b.textContent.includes(tx.category)) {
+          b.className = 'p-2 rounded-xl border border-emerald-500 bg-emerald-500/10 flex flex-col items-center gap-1 transition text-center';
+        } else {
+          b.className = 'p-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 flex flex-col items-center gap-1 transition text-center';
+        }
+      });
+
+      document.getElementById('transaction-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('transaction-modal').classList.add('hidden');
+    }
+
+    function handleSaveTransaction(e) {
+      e.preventDefault();
+      const txId = document.getElementById('edit-transaction-id').value;
+      const amount = parseFloat(document.getElementById('form-amount').value);
+      const title = document.getElementById('form-title').value.trim();
+      const category = document.getElementById('form-category').value;
+      const date = document.getElementById('form-date').value;
+      const time = document.getElementById('form-time').value || '12:00';
+      const paymentMethod = document.getElementById('form-payment-method').value;
+      const notes = document.getElementById('form-notes').value.trim();
+
+      if (!amount || amount <= 0 || !title || !date) {
+        showToast('Please fill all required fields properly');
+        return;
+      }
+
+      if (txId) {
+        // Edit existing
+        const idx = transactions.findIndex(t => t.id === txId);
+        if (idx !== -1) {
+          transactions[idx] = {
+            ...transactions[idx],
+            type: activeFormType,
+            amount,
+            title,
+            category,
+            date,
+            time,
+            paymentMethod,
+            notes
+          };
+          showToast('Transaction updated!');
+        }
+      } else {
+        // Add new
+        const newTx = {
+          id: 'tx-' + Date.now(),
+          type: activeFormType,
+          amount,
+          title,
+          category,
+          date,
+          time,
+          paymentMethod,
+          notes,
+          createdAt: Date.now()
+        };
+        transactions.unshift(newTx);
+        showToast(`${activeFormType === 'credit' ? 'Income' : 'Expense'} recorded!`);
+      }
+
+      saveToStorage();
+      closeModal();
+
+      // Refresh screens
+      renderDashboard();
+      renderVisualizations();
+      renderHistory();
+      renderBudgetSettings();
+    }
+
+    function deleteTransaction(txId) {
+      if (confirm('Delete this transaction?')) {
+        transactions = transactions.filter(t => t.id !== txId);
+        saveToStorage();
+        renderDashboard();
+        renderVisualizations();
+        renderHistory();
+        renderBudgetSettings();
+        showToast('Transaction removed');
+      }
+    }
+
+    /* ==========================================================================
+       HELPERS & UTILITIES
+       ========================================================================== */
+    function getCategoryMeta(catName, type) {
+      const list = CATEGORIES[type] || [...CATEGORIES.debit, ...CATEGORIES.credit];
+      const match = list.find(c => c.id.toLowerCase() === (catName || '').toLowerCase());
+      if (match) return match;
+      return { id: catName || 'Other', icon: type === 'credit' ? '💰' : '🏷️', color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' };
+    }
+
+    function formatFriendlyDate(isoDate) {
+      if (!isoDate) return '';
+      const todayISO = '2026-11-10';
+      if (isoDate === todayISO) return 'Today, Nov 10';
+      if (isoDate === '2026-11-09') return 'Yesterday, Nov 9';
+
+      const parts = isoDate.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+      return isoDate;
+    }
+
+    function escapeHTML(str) {
+      return (str || '').replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[tag] || tag));
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'px-4 py-2.5 rounded-2xl bg-slate-800/95 border border-slate-700 text-slate-100 text-xs font-semibold shadow-2xl backdrop-blur transition-all duration-300 opacity-0 translate-y-2 flex items-center gap-2';
+      toast.innerHTML = `<span class="text-emerald-400">●</span> ${escapeHTML(msg)}`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+  </script>
+</body>
+</html>

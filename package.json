@@ -1,0 +1,21 @@
+{
+  "name": "spendwise-mobile-expense-tracker",
+  "version": "1.0.0",
+  "description": "Mobile Expense & Credit/Debit Tracker with Date-wise Visualizations and Ledger History",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 server.py",
+    "start": "python3 server.py",
+    "serve": "npx -y serve ."
+  },
+  "keywords": [
+    "expense-tracker",
+    "budget",
+    "pwa",
+    "mobile-app",
+    "credit-debit",
+    "data-visualization"
+  ],
+  "author": "",
+  "license": "MIT"
+}
